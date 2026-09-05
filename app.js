@@ -1,25 +1,29 @@
+```javascript
 "use strict";
 
 /*
 =========================================================
-KAVUN SECURITY STUDIO
-Main interaction layer
+ KAVUN SECURITY STUDIO
+ app.js
 =========================================================
 */
 
+
+/* =======================================================
+   DOM HELPERS
+======================================================= */
 
 const $ = (selector, parent = document) => {
   return parent.querySelector(selector);
 };
 
-
 const $$ = (selector, parent = document) => {
-  return [...parent.querySelectorAll(selector)];
+  return Array.from(parent.querySelectorAll(selector));
 };
 
 
 /* =======================================================
-   STATE
+   GLOBAL STATE
 ======================================================= */
 
 const state = {
@@ -36,16 +40,13 @@ const state = {
 ======================================================= */
 
 const nodeData = {
-
   gateway: {
     code: "GW-01",
     title: "Edge Gateway",
     status: "MONITORED",
     statusClass: "status-green",
-
     description:
       "Public ingress boundary responsible for request filtering, rate controls and edge authentication.",
-
     metrics: [
       "18.4k/min",
       "1.7%",
@@ -53,16 +54,13 @@ const nodeData = {
     ]
   },
 
-
   identity: {
     code: "ID-02",
     title: "Identity Layer",
     status: "ELEVATED",
     statusClass: "status-yellow",
-
     description:
       "Central authentication boundary responsible for sessions, device trust and privileged access.",
-
     metrics: [
       "8,421",
       "94.2%",
@@ -70,16 +68,13 @@ const nodeData = {
     ]
   },
 
-
   api: {
     code: "API-03",
     title: "API Mesh",
     status: "INVESTIGATE",
     statusClass: "status-red",
-
     description:
       "Service-to-service API surface showing an unusual concentration of rejected authorization attempts.",
-
     metrics: [
       "42.8k/min",
       "3.8%",
@@ -87,16 +82,13 @@ const nodeData = {
     ]
   },
 
-
   data: {
     code: "DB-04",
     title: "Data Plane",
     status: "PROTECTED",
     statusClass: "status-green",
-
     description:
       "Encrypted data layer segmented from application workloads and monitored for anomalous access.",
-
     metrics: [
       "12.8M",
       "100%",
@@ -104,56 +96,81 @@ const nodeData = {
     ]
   },
 
-
   worker: {
     code: "WK-05",
     title: "Worker Cluster",
     status: "HEALTHY",
     statusClass: "status-green",
-
     description:
       "Background processing cluster isolated from the public application layer.",
-
     metrics: [
       "4,210/min",
       "0.8%",
       "99.98%"
     ]
   }
-
 };
+
+
+/* =======================================================
+   COMMAND PALETTE DATA
+======================================================= */
+
+const commands = [
+  {
+    title: "Threat Lab",
+    description: "Open the interactive architecture laboratory.",
+    target: "#lab"
+  },
+
+  {
+    title: "Capabilities",
+    description: "Explore security and engineering capabilities.",
+    target: "#services"
+  },
+
+  {
+    title: "Field Notes",
+    description: "Read selected engineering observations.",
+    target: "#notes"
+  },
+
+  {
+    title: "Method",
+    description: "Inspect the four-step engagement method.",
+    target: "#method"
+  },
+
+  {
+    title: "Contact",
+    description: "Start a security review.",
+    target: "#contact"
+  }
+];
+
+let commandSelection = 0;
 
 
 /* =======================================================
    INIT
 ======================================================= */
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+document.addEventListener("DOMContentLoaded", init);
 
-    updateYear();
+function init() {
+  updateYear();
+  startClock();
 
-    startClock();
-
-    setupNavigation();
-
-    setupMobileMenu();
-
-    setupLab();
-
-    setupTelemetry();
-
-    setupMethodAccordion();
-
-    setupContactForm();
-
-    setupCommandPalette();
-
-    setupScrollReveal();
-
-  }
-);
+  setupNavigation();
+  setupMobileMenu();
+  setupLab();
+  setupSimulation();
+  setupTelemetry();
+  setupMethodAccordion();
+  setupContactForm();
+  setupCommandPalette();
+  setupScrollReveal();
+}
 
 
 /* =======================================================
@@ -161,68 +178,54 @@ document.addEventListener(
 ======================================================= */
 
 function updateYear() {
-
-  const year =
-    $("#year");
+  const year = $("#year");
 
   if (!year) {
     return;
   }
 
-  year.textContent =
-    new Date().getFullYear();
-
+  year.textContent = String(
+    new Date().getFullYear()
+  );
 }
 
 
 /* =======================================================
-   CLOCK
+   LIVE CLOCK
 ======================================================= */
 
 function startClock() {
-
-  const clock =
-    $("#systemClock");
+  const clock = $("#systemClock");
 
   if (!clock) {
     return;
   }
 
+  const updateClock = () => {
+    const now = new Date();
 
-  function update() {
+    const hours = String(
+      now.getHours()
+    ).padStart(2, "0");
 
-    const now =
-      new Date();
+    const minutes = String(
+      now.getMinutes()
+    ).padStart(2, "0");
 
-    const hours =
-      String(
-        now.getHours()
-      ).padStart(2, "0");
-
-    const minutes =
-      String(
-        now.getMinutes()
-      ).padStart(2, "0");
-
-    const seconds =
-      String(
-        now.getSeconds()
-      ).padStart(2, "0");
-
+    const seconds = String(
+      now.getSeconds()
+    ).padStart(2, "0");
 
     clock.textContent =
       `${hours}:${minutes}:${seconds}`;
+  };
 
-  }
+  updateClock();
 
-
-  update();
-
-  setInterval(
-    update,
+  window.setInterval(
+    updateClock,
     1000
   );
-
 }
 
 
@@ -231,60 +234,39 @@ function startClock() {
 ======================================================= */
 
 function setupNavigation() {
+  const links = $$('a[href^="#"]');
 
-  $$('a[href^="#"]').forEach(
-    (link) => {
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const targetId =
+        link.getAttribute("href");
 
-      link.addEventListener(
-        "click",
-        (event) => {
+      if (
+        !targetId ||
+        targetId === "#"
+      ) {
+        return;
+      }
 
-          const targetId =
-            link.getAttribute(
-              "href"
-            );
+      const target =
+        document.querySelector(targetId);
 
+      if (!target) {
+        return;
+      }
 
-          if (
-            !targetId ||
-            targetId === "#"
-          ) {
-            return;
-          }
+      event.preventDefault();
 
+      target.scrollIntoView({
+        behavior: prefersReducedMotion()
+          ? "auto"
+          : "smooth",
+        block: "start"
+      });
 
-          const target =
-            document.querySelector(
-              targetId
-            );
-
-
-          if (!target) {
-            return;
-          }
-
-
-          event.preventDefault();
-
-
-          target.scrollIntoView({
-            behavior:
-              prefersReducedMotion()
-                ? "auto"
-                : "smooth",
-
-            block: "start"
-          });
-
-
-          closeMobileMenu();
-
-        }
-      );
-
-    }
-  );
-
+      closeMobileMenu();
+    });
+  });
 }
 
 
@@ -293,77 +275,52 @@ function setupNavigation() {
 ======================================================= */
 
 function setupMobileMenu() {
-
   const button =
     $("#mobileMenuButton");
 
   const menu =
     $("#mobileMenu");
-
 
   if (!button || !menu) {
     return;
   }
 
+  button.addEventListener("click", () => {
+    state.mobileMenuOpen =
+      !state.mobileMenuOpen;
 
-  button.addEventListener(
-    "click",
-    () => {
+    menu.classList.toggle(
+      "open",
+      state.mobileMenuOpen
+    );
 
-      state.mobileMenuOpen =
-        !state.mobileMenuOpen;
-
-
-      menu.classList.toggle(
-        "open",
-        state.mobileMenuOpen
-      );
-
-
-      button.setAttribute(
-        "aria-expanded",
-        String(
-          state.mobileMenuOpen
-        )
-      );
-
-    }
-  );
-
+    button.setAttribute(
+      "aria-expanded",
+      String(state.mobileMenuOpen)
+    );
+  });
 }
 
 
 function closeMobileMenu() {
-
   const button =
     $("#mobileMenuButton");
 
   const menu =
     $("#mobileMenu");
 
-
-  state.mobileMenuOpen =
-    false;
-
+  state.mobileMenuOpen = false;
 
   if (menu) {
-
-    menu.classList.remove(
-      "open"
-    );
-
+    menu.classList.remove("open");
   }
 
-
   if (button) {
-
     button.setAttribute(
       "aria-expanded",
       "false"
     );
-
   }
-
 }
 
 
@@ -372,62 +329,46 @@ function closeMobileMenu() {
 ======================================================= */
 
 function setupLab() {
-
   const nodes =
     $$(".architecture-node");
 
+  if (!nodes.length) {
+    return;
+  }
 
-  nodes.forEach(
-    (node) => {
-
-      node.addEventListener(
-        "click",
-        () => {
-
-          activateNode(
-            node.dataset.node
-          );
-
-        }
+  nodes.forEach((node) => {
+    node.addEventListener("click", () => {
+      activateNode(
+        node.dataset.node
       );
-
-    }
-  );
-
+    });
+  });
 
   activateNode(
     state.activeNode
   );
-
 }
 
 
 function activateNode(nodeName) {
-
   const data =
     nodeData[nodeName];
-
 
   if (!data) {
     return;
   }
-
 
   state.activeNode =
     nodeName;
 
 
   $$(".architecture-node")
-    .forEach(
-      (node) => {
-
-        node.classList.toggle(
-          "active",
-          node.dataset.node === nodeName
-        );
-
-      }
-    );
+    .forEach((node) => {
+      node.classList.toggle(
+        "active",
+        node.dataset.node === nodeName
+      );
+    });
 
 
   const status =
@@ -453,13 +394,11 @@ function activateNode(nodeName) {
 
 
   if (status) {
-
     status.textContent =
       data.status;
 
     status.className =
       `status ${data.statusClass}`;
-
   }
 
 
@@ -476,10 +415,8 @@ function activateNode(nodeName) {
 
 
   if (description) {
-
     description.textContent =
       data.description;
-
   }
 
 
@@ -499,7 +436,6 @@ function activateNode(nodeName) {
     metricThree.textContent =
       data.metrics[2];
   }
-
 }
 
 
@@ -508,61 +444,42 @@ function activateNode(nodeName) {
 ======================================================= */
 
 function setupSimulation() {
-
   const button =
     $("#runSimulation");
-
 
   if (!button) {
     return;
   }
 
-
   button.addEventListener(
     "click",
     runAttackSimulation
   );
-
 }
 
 
-/* initialize simulation listener */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  setupSimulation
-);
-
-
 function runAttackSimulation() {
-
   if (
     state.simulationRunning
   ) {
     return;
   }
 
-
   const button =
     $("#runSimulation");
-
 
   if (!button) {
     return;
   }
 
-
   state.simulationRunning =
     true;
-
 
   button.disabled =
     true;
 
-
   const originalText =
     button.innerHTML;
-
 
   button.innerHTML =
     "ANALYZING ATTACK PATH...";
@@ -587,60 +504,54 @@ function runAttackSimulation() {
   let index = 0;
 
 
-  const interval =
-    setInterval(
-      () => {
+  const step =
+    prefersReducedMotion()
+      ? 180
+      : 620;
 
-        activateNode(
-          sequence[index]
+
+  const interval =
+    window.setInterval(() => {
+
+      activateNode(
+        sequence[index]
+      );
+
+      index++;
+
+
+      if (
+        index >=
+        sequence.length
+      ) {
+
+        window.clearInterval(
+          interval
         );
 
 
-        index++;
+        window.setTimeout(() => {
+
+          button.disabled =
+            false;
+
+          button.innerHTML =
+            originalText;
+
+          state.simulationRunning =
+            false;
 
 
-        if (
-          index >=
-          sequence.length
-        ) {
-
-          clearInterval(
-            interval
+          showToast(
+            "Simulation complete",
+            "API Mesh surfaced as the highest-priority investigation point."
           );
 
+        }, 350);
 
-          setTimeout(
-            () => {
+      }
 
-              button.disabled =
-                false;
-
-
-              button.innerHTML =
-                originalText;
-
-
-              state.simulationRunning =
-                false;
-
-
-              showToast(
-                "Simulation complete",
-                "API Mesh surfaced as the highest-priority investigation point."
-              );
-
-            },
-            350
-          );
-
-        }
-
-      },
-      prefersReducedMotion()
-        ? 180
-        : 620
-    );
-
+    }, step);
 }
 
 
@@ -649,41 +560,31 @@ function runAttackSimulation() {
 ======================================================= */
 
 function setupTelemetry() {
-
   const toggle =
     $("#telemetryToggle");
 
-
   if (toggle) {
-
     toggle.addEventListener(
       "click",
       toggleTelemetry
     );
-
   }
 
+  window.setInterval(() => {
 
-  setInterval(
-    () => {
+    if (
+      state.telemetryPaused
+    ) {
+      return;
+    }
 
-      if (
-        !state.telemetryPaused
-      ) {
+    generateTelemetryEvent();
 
-        generateTelemetryEvent();
-
-      }
-
-    },
-    4000
-  );
-
+  }, 4000);
 }
 
 
 function toggleTelemetry() {
-
   state.telemetryPaused =
     !state.telemetryPaused;
 
@@ -712,7 +613,6 @@ function toggleTelemetry() {
       ? "Live events are no longer updating."
       : "Live event stream is active again."
   );
-
 }
 
 
@@ -767,12 +667,8 @@ function generateTelemetryEvent() {
     ];
 
 
-  const now =
-    new Date();
-
-
   const time =
-    now.toLocaleTimeString(
+    new Date().toLocaleTimeString(
       "en-GB",
       {
         hour12: false
@@ -800,7 +696,6 @@ function generateTelemetryEvent() {
 
 
   row.innerHTML = `
-
     <span>
       ${escapeHTML(time)}
     </span>
@@ -816,7 +711,6 @@ function generateTelemetryEvent() {
     <strong class="${event.className}">
       ${escapeHTML(event.result)}
     </strong>
-
   `;
 
 
@@ -826,7 +720,8 @@ function generateTelemetryEvent() {
 
 
   while (
-    container.children.length > 5
+    container.children.length >
+    5
   ) {
 
     container.lastElementChild.remove();
@@ -837,22 +732,18 @@ function generateTelemetryEvent() {
   updateSignal();
 
 
-  setTimeout(
-    () => {
+  window.setTimeout(() => {
 
-      row.classList.remove(
-        "new"
-      );
+    row.classList.remove(
+      "new"
+    );
 
-    },
-    500
-  );
-
+  }, 500);
 }
 
 
 /* =======================================================
-   SIGNAL
+   SIGNAL VALUES
 ======================================================= */
 
 function updateSignal() {
@@ -872,10 +763,8 @@ function updateSignal() {
         Math.random() * 10
       );
 
-
     latency.textContent =
       `${value}ms`;
-
   }
 
 
@@ -887,12 +776,9 @@ function updateSignal() {
         Math.random() * 0.8
       ).toFixed(1);
 
-
     blocked.textContent =
       `${value}%`;
-
   }
-
 }
 
 
@@ -906,53 +792,46 @@ function setupMethodAccordion() {
     $$("[data-method]");
 
 
-  items.forEach(
-    (item) => {
+  items.forEach((item) => {
 
-      const trigger =
-        $(".method-trigger", item);
-
-
-      if (!trigger) {
-        return;
-      }
+    const trigger =
+      $(".method-trigger", item);
 
 
-      trigger.addEventListener(
-        "click",
-        () => {
-
-          const alreadyActive =
-            item.classList.contains(
-              "active"
-            );
+    if (!trigger) {
+      return;
+    }
 
 
-          items.forEach(
-            (other) => {
+    trigger.addEventListener(
+      "click",
+      () => {
 
-              other.classList.remove(
-                "active"
-              );
-
-            }
+        const wasActive =
+          item.classList.contains(
+            "active"
           );
 
 
-          if (!alreadyActive) {
+        items.forEach((other) => {
+          other.classList.remove(
+            "active"
+          );
+        });
 
-            item.classList.add(
-              "active"
-            );
 
-          }
+        if (!wasActive) {
+
+          item.classList.add(
+            "active"
+          );
 
         }
-      );
 
-    }
-  );
+      }
+    );
 
+  });
 }
 
 
@@ -978,41 +857,38 @@ function setupContactForm() {
     );
 
 
-  fields.forEach(
-    (field) => {
+  fields.forEach((field) => {
 
-      field.addEventListener(
-        "input",
-        () => {
+    field.addEventListener(
+      "input",
+      () => {
 
-          clearFieldError(
-            field
-          );
+        clearFieldError(
+          field
+        );
 
-        }
-      );
+      }
+    );
 
 
-      field.addEventListener(
-        "change",
-        () => {
+    field.addEventListener(
+      "change",
+      () => {
 
-          clearFieldError(
-            field
-          );
+        clearFieldError(
+          field
+        );
 
-        }
-      );
+      }
+    );
 
-    }
-  );
+  });
 
 
   form.addEventListener(
     "submit",
     handleFormSubmit
   );
-
 }
 
 
@@ -1035,21 +911,19 @@ async function handleFormSubmit(event) {
   let valid = true;
 
 
-  fields.forEach(
-    (field) => {
+  fields.forEach((field) => {
 
-      if (
-        !validateField(
-          field
-        )
-      ) {
+    if (
+      !validateField(
+        field
+      )
+    ) {
 
-        valid = false;
-
-      }
+      valid = false;
 
     }
-  );
+
+  });
 
 
   if (!valid) {
@@ -1065,9 +939,7 @@ async function handleFormSubmit(event) {
 
 
     if (firstInvalid) {
-
       firstInvalid.focus();
-
     }
 
 
@@ -1083,6 +955,11 @@ async function handleFormSubmit(event) {
 
   const submit =
     $(".submit-button", form);
+
+
+  if (!submit) {
+    return;
+  }
 
 
   const original =
@@ -1129,7 +1006,6 @@ async function handleFormSubmit(event) {
     "Request received",
     "Your security intake was processed locally."
   );
-
 }
 
 
@@ -1162,7 +1038,6 @@ function validateField(field) {
 
 
     return false;
-
   }
 
 
@@ -1179,7 +1054,6 @@ function validateField(field) {
 
 
     return false;
-
   }
 
 
@@ -1189,7 +1063,6 @@ function validateField(field) {
 
 
   return true;
-
 }
 
 
@@ -1217,7 +1090,9 @@ function setFieldError(
 }
 
 
-function clearFieldError(field) {
+function clearFieldError(
+  field
+) {
 
   const wrapper =
     field.closest(
@@ -1245,7 +1120,6 @@ function clearFieldError(field) {
       "";
 
   }
-
 }
 
 
@@ -1269,7 +1143,6 @@ function showFormMessage(
 
   element.className =
     `form-message ${type}`;
-
 }
 
 
@@ -1278,56 +1151,12 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
     email
   );
-
 }
 
 
 /* =======================================================
    COMMAND PALETTE
 ======================================================= */
-
-const commands = [
-
-  {
-    title: "Threat Lab",
-    description:
-      "Open the interactive architecture laboratory.",
-    target: "#lab"
-  },
-
-  {
-    title: "Capabilities",
-    description:
-      "Explore security and engineering capabilities.",
-    target: "#services"
-  },
-
-  {
-    title: "Field Notes",
-    description:
-      "Read selected engineering observations.",
-    target: "#notes"
-  },
-
-  {
-    title: "Method",
-    description:
-      "Inspect the four-step engagement method.",
-    target: "#method"
-  },
-
-  {
-    title: "Contact",
-    description:
-      "Start a security review.",
-    target: "#contact"
-  }
-
-];
-
-
-let commandSelection = 0;
-
 
 function setupCommandPalette() {
 
@@ -1339,6 +1168,9 @@ function setupCommandPalette() {
 
   const input =
     $("#commandInput");
+
+  const overlay =
+    $("#commandOverlay");
 
 
   if (open) {
@@ -1386,10 +1218,12 @@ function setupCommandPalette() {
 
 
         if (
-          event.key === "ArrowDown"
+          event.key ===
+          "ArrowDown"
         ) {
 
           event.preventDefault();
+
 
           commandSelection =
             Math.min(
@@ -1407,10 +1241,12 @@ function setupCommandPalette() {
 
 
         if (
-          event.key === "ArrowUp"
+          event.key ===
+          "ArrowUp"
         ) {
 
           event.preventDefault();
+
 
           commandSelection =
             Math.max(
@@ -1425,7 +1261,8 @@ function setupCommandPalette() {
 
 
         if (
-          event.key === "Enter"
+          event.key ===
+          "Enter"
         ) {
 
           event.preventDefault();
@@ -1447,7 +1284,8 @@ function setupCommandPalette() {
 
 
         if (
-          event.key === "Escape"
+          event.key ===
+          "Escape"
         ) {
 
           closeCommandPalette();
@@ -1460,10 +1298,6 @@ function setupCommandPalette() {
   }
 
 
-  const overlay =
-    $("#commandOverlay");
-
-
   if (overlay) {
 
     overlay.addEventListener(
@@ -1471,7 +1305,8 @@ function setupCommandPalette() {
       (event) => {
 
         if (
-          event.target === overlay
+          event.target ===
+          overlay
         ) {
 
           closeCommandPalette();
@@ -1485,7 +1320,6 @@ function setupCommandPalette() {
 
 
   renderCommands("");
-
 }
 
 
@@ -1520,17 +1354,26 @@ function openCommandPalette() {
 
   if (input) {
 
-    input.value = "";
+    input.value =
+      "";
 
-    renderCommands("");
+    commandSelection =
+      0;
 
-    setTimeout(
-      () => input.focus(),
+
+    renderCommands(
+      ""
+    );
+
+
+    window.setTimeout(
+      () => {
+        input.focus();
+      },
       50
     );
 
   }
-
 }
 
 
@@ -1558,7 +1401,6 @@ function closeCommandPalette() {
     "aria-hidden",
     "true"
   );
-
 }
 
 
@@ -1574,7 +1416,7 @@ function renderCommands(query) {
 
 
   const normalized =
-    query
+    String(query)
       .trim()
       .toLowerCase();
 
@@ -1616,7 +1458,6 @@ function renderCommands(query) {
 
 
     return;
-
   }
 
 
@@ -1631,11 +1472,14 @@ function renderCommands(query) {
           <button
             type="button"
             class="command-item ${
-              index === commandSelection
+              index ===
+              commandSelection
                 ? "selected"
                 : ""
             }"
-            data-target="${command.target}"
+            data-target="${escapeHTML(
+              command.target
+            )}"
           >
 
             <span class="command-item-main">
@@ -1666,29 +1510,26 @@ function renderCommands(query) {
 
 
   $$(".command-item")
-    .forEach(
-      (button) => {
+    .forEach((button) => {
 
-        button.addEventListener(
-          "click",
-          () => {
+      button.addEventListener(
+        "click",
+        () => {
 
-            const target =
-              button.dataset.target;
+          const target =
+            button.dataset.target;
 
 
-            closeCommandPalette();
+          closeCommandPalette();
 
-            scrollToTarget(
-              target
-            );
+          scrollToTarget(
+            target
+          );
 
-          }
-        );
+        }
+      );
 
-      }
-    );
-
+    });
 }
 
 
@@ -1700,17 +1541,17 @@ function updateCommandSelection() {
 
         item.classList.toggle(
           "selected",
-          index === commandSelection
+          index ===
+          commandSelection
         );
 
       }
     );
-
 }
 
 
 /* =======================================================
-   KEYBOARD SHORTCUTS
+   GLOBAL KEYBOARD SHORTCUTS
 ======================================================= */
 
 document.addEventListener(
@@ -1722,7 +1563,8 @@ document.addEventListener(
         event.ctrlKey ||
         event.metaKey
       ) &&
-      event.key.toLowerCase() === "k"
+      event.key.toLowerCase() ===
+      "k"
     ) {
 
       event.preventDefault();
@@ -1744,7 +1586,8 @@ document.addEventListener(
 
 
     if (
-      event.key === "Escape"
+      event.key ===
+      "Escape"
     ) {
 
       closeCommandPalette();
@@ -1788,12 +1631,14 @@ function setupScrollReveal() {
 
 
     return;
-
   }
 
 
   if (
-    !("IntersectionObserver" in window)
+    !(
+      "IntersectionObserver"
+      in window
+    )
   ) {
 
     elements.forEach(
@@ -1808,7 +1653,6 @@ function setupScrollReveal() {
 
 
     return;
-
   }
 
 
@@ -1927,19 +1771,23 @@ function showToast(
     $(".toast-close", toast);
 
 
-  close.addEventListener(
-    "click",
-    () => {
+  if (close) {
 
-      removeToast(
-        toast
-      );
+    close.addEventListener(
+      "click",
+      () => {
 
-    }
-  );
+        removeToast(
+          toast
+        );
+
+      }
+    );
+
+  }
 
 
-  setTimeout(
+  window.setTimeout(
     () => {
 
       removeToast(
@@ -1949,11 +1797,12 @@ function showToast(
     },
     4500
   );
-
 }
 
 
-function removeToast(toast) {
+function removeToast(
+  toast
+) {
 
   if (
     !toast ||
@@ -1970,17 +1819,22 @@ function removeToast(toast) {
   );
 
 
-  setTimeout(
+  window.setTimeout(
     () => {
 
-      toast.remove();
+      if (
+        toast.isConnected
+      ) {
+
+        toast.remove();
+
+      }
 
     },
     prefersReducedMotion()
       ? 0
       : 220
   );
-
 }
 
 
@@ -2029,7 +1883,7 @@ function delay(ms) {
   return new Promise(
     (resolve) => {
 
-      setTimeout(
+      window.setTimeout(
         resolve,
         ms
       );
@@ -2065,3 +1919,4 @@ function escapeHTML(value) {
     );
 
 }
+```
